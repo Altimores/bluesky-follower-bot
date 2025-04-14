@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluesky Auto Follower</title>
+    <!-- Bootstrap CSS (Replit theme) -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container py-5">
+        <div class="form-container">
+            <div class="text-center logo-container">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" class="mb-2">
+                    <path d="M160.5 105c0 30.652-24.848 55.5-55.5 55.5S49.5 135.652 49.5 105 74.348 49.5 105 49.5s55.5 24.848 55.5 55.5Z" fill="#0085FF" fill-opacity=".1" stroke="#0085FF" stroke-width="5"/>
+                    <path d="M152.045 59.684c2.93 2.29 3.45 6.505 1.157 9.436l-57.04 72.926c-2.292 2.93-6.507 3.45-9.437 1.158-2.93-2.293-3.45-6.507-1.157-9.437l57.04-72.926c2.292-2.93 6.507-3.45 9.437-1.157Z" fill="#0085FF"/>
+                    <path d="M95.768 142.046c-2.93 2.292-7.144 1.772-9.436-1.158-2.293-2.93-1.773-7.144 1.157-9.437l72.926-57.04c2.93-2.292 7.145-1.772 9.437 1.158 2.292 2.93 1.772 7.145-1.158 9.437l-72.926 57.04Z" fill="#0085FF"/>
+                </svg>
+                <h1 class="display-5 fw-bold">Bluesky Auto Follower</h1>
+                <p class="lead mb-4">Automatically follow the followers of any Bluesky user</p>
+            </div>
+            
+            <div id="alertContainer"></div>
+            
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-body">
+                    <form id="followForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Your Bluesky Username</label>
+                            <input type="text" class="form-control" id="username" placeholder="your.handle" required>
+                            <div class="form-text">Full username including domain (e.g., user.bsky.social)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="appPassword" class="form-label">App Password</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="appPassword" required>
+                                <span class="input-group-text info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="You can create an app password in your Bluesky account settings">
+                                    <i class="fas fa-info-circle"></i>
+                                </span>
+                            </div>
+                            <div class="form-text">Use an app password from your Bluesky settings for security</div>
+                        </div>
+                        
+                        <div class="mb-3" id="targetUsernameGroup">
+                            <label for="targetUsername" class="form-label">Target Username to Follow Their Followers</label>
+                            <input type="text" class="form-control" id="targetUsername" placeholder="target.handle">
+                            <div class="form-text">The Bluesky user whose followers you want to follow</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="scanLimit" class="form-label">Scan Limit</label>
+                                    <input type="number" class="form-control" id="scanLimit" value="5000" min="1" max="50000">
+                                    <div class="form-text">How many followers to scan (max: 50000)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="followLimit" class="form-label">Follow/Unfollow Limit</label>
+                                    <input type="number" class="form-control" id="followLimit" value="1000" min="1" max="10000">
+                                    <div class="form-text">How many users to actually follow/unfollow</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="filterTurkish">
+                            <label class="form-check-label" for="filterTurkish">
+                                Only process Turkish users
+                            </label>
+                            <div class="form-text">Filter for users with Turkish names in their handle or display name</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle me-2"></i> This tool applies a 2-second delay between requests to respect API rate limits. Your credentials are not stored.
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-2 mb-md-0">
+                                <button type="button" id="followButton" class="btn btn-primary w-100">
+                                    <i class="fas fa-user-plus me-2"></i> Start Following
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="button" id="unfollowButton" class="btn btn-outline-danger w-100">
+                                    <i class="fas fa-user-minus me-2"></i> Start Unfollowing
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="button" id="stopButton" class="btn btn-warning d-none">
+                                <i class="fas fa-stop-circle me-2"></i> Stop Process
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Loading spinner and progress -->
+            <div id="progressContainer" class="my-4 d-none">
+                <!-- Progress indicators -->
+                <div class="progress mb-3" style="height: 25px;">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5 id="progressTitle" class="mb-1">Processing...</h5>
+                        <p id="progressText" class="text-secondary mb-0">Initializing...</p>
+                        <p id="progressCounter" class="text-secondary mb-0 small"></p>
+                    </div>
+                    <!-- Stop button in progress section -->
+                    <button id="stopButtonProgress" class="btn btn-sm btn-warning ms-3">
+                        <i class="fas fa-stop-circle"></i> Stop
+                    </button>
+                </div>
+                
+                <div class="alert alert-info small">
+                    <i class="fas fa-info-circle me-2"></i> The process will continue in the background. 
+                    You can close this tab and check back later to see results.
+                </div>
+            </div>
+            
+            <!-- Results container -->
+            <div id="results" class="results-container d-none">
+                <div class="card bg-dark border-primary">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i> <span id="operationTitle">Operation Complete</span></h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="card bg-dark bg-opacity-50 mb-3">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="text-secondary">Scanned:</span>
+                                            <span id="scannedCount" class="fw-bold">0</span>
+                                        </div>
+                                        <div>|</div>
+                                        <div>
+                                            <span id="operationText">Processed</span>:
+                                            <span id="processedCount" class="fw-bold text-primary">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="resultsDescription" class="small text-secondary">
+                                Operation complete
+                            </p>
+                        </div>
+                        
+                        <h6 class="mb-2"><span id="userListTitle">Processed accounts:</span></h6>
+                        <ul id="userList" class="list-group list-group-flush mb-3">
+                            <!-- Will be populated by JavaScript -->
+                        </ul>
+                        
+                        <div class="d-grid">
+                            <button type="button" id="newOperationButton" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo me-2"></i> Start New Operation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="container py-3 mt-4">
+        <div class="text-center text-muted">
+            <p class="small">This tool interacts with the Bluesky API but is not affiliated with Bluesky.</p>
+            <p class="small">Your credentials are only sent directly to the Bluesky API and are not stored.</p>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
