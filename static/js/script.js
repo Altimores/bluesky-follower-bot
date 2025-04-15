@@ -1,21 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
   let intervalId = null;
 
-  function startOperation(endpoint) {
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("appPassword").value;
-    const target = document.getElementById("targetUsername").value;
-    const scanLimit = document.getElementById("scanLimit").value || 1000;
-    const followLimit = document.getElementById("followLimit").value || 100;
-    const turkishOnly = document.getElementById("filterTurkish").checked;
+  const followBtn = document.getElementById("followButton");
+  const unfollowBtn = document.getElementById("unfollowButton");
+  const stopBtn = document.getElementById("stopButton");
 
+  function startOperation(endpoint) {
     const payload = {
-      username,
-      password,
-      target,
-      scan_limit: parseInt(scanLimit),
-      follow_limit: parseInt(followLimit),
-      turkish_only: turkishOnly
+      username: document.getElementById("username").value,
+      password: document.getElementById("appPassword").value,
+      target: document.getElementById("targetUsername").value,
+      scan_limit: parseInt(document.getElementById("scanLimit").value),
+      follow_limit: parseInt(document.getElementById("followLimit").value),
+      turkish_only: document.getElementById("turkishOnly").checked
     };
 
     fetch(endpoint, {
@@ -25,17 +22,16 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       body: JSON.stringify(payload)
     })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("progressContainer").classList.remove("d-none");
-        document.getElementById("followButton").disabled = true;
-        document.getElementById("unfollowButton").disabled = true;
-        document.getElementById("stopButton").classList.remove("d-none");
+      .then(() => {
+        document.getElementById("status").innerText = "🟢 Started";
+        followBtn.disabled = true;
+        unfollowBtn.disabled = true;
+        stopBtn.disabled = false;
         intervalId = setInterval(checkStatus, 2000);
       })
       .catch(err => {
-        console.error("Failed to start task:", err);
-        alert("❌ Failed to start task. See console for details.");
+        console.error(err);
+        document.getElementById("status").innerText = "❌ Failed to start";
       });
   }
 
@@ -43,68 +39,44 @@ document.addEventListener("DOMContentLoaded", () => {
     fetch("/api/task/status")
       .then(res => res.json())
       .then(data => {
-        const op = data.operation_type ? data.operation_type.toUpperCase() : "PROCESSING";
-        const summary = `${data.completed ? "✅ Completed" : `🔄 ${op}`} ${data.processed_count}/${data.follow_limit}`;
+        const status = data.completed
+          ? "✅ Completed"
+          : data.error
+          ? `❌ Error: ${data.error}`
+          : `🔄 Processing ${data.processed_count}/${data.follow_limit}`;
 
-        document.getElementById("progressTitle").innerText = summary;
-        document.getElementById("progressText").innerText = data.error ? `❌ ${data.error}` : "Running...";
-        document.getElementById("progressCounter").innerText = `Scanned: ${data.current_index}`;
-
-        let percent = Math.min((data.processed_count / data.follow_limit) * 100, 100);
-        document.getElementById("progressBar").style.width = `${percent}%`;
-        document.getElementById("progressBar").innerText = `${Math.floor(percent)}%`;
+        document.getElementById("status").innerText = status;
 
         if (data.completed || data.error) {
           clearInterval(intervalId);
-          document.getElementById("followButton").disabled = false;
-          document.getElementById("unfollowButton").disabled = false;
-          document.getElementById("stopButton").classList.add("d-none");
+          followBtn.disabled = false;
+          unfollowBtn.disabled = false;
+          stopBtn.disabled = true;
 
-          if (data.users?.length > 0) {
-            const list = document.getElementById("userList");
-            list.innerHTML = "";
-            data.users.forEach(user => {
-              const li = document.createElement("li");
-              li.className = "list-group-item bg-dark text-white";
-              li.innerText = `${user.displayName} (@${user.handle})`;
-              list.appendChild(li);
-            });
-            document.getElementById("results").classList.remove("d-none");
-          }
+          const list = document.getElementById("result-list");
+          list.innerHTML = "";
+          (data.users || []).forEach(user => {
+            const li = document.createElement("li");
+            li.classList.add("list-group-item", "bg-dark", "text-white");
+            li.innerText = `${user.displayName} (@${user.handle})`;
+            list.appendChild(li);
+          });
         }
-      })
-      .catch(err => {
-        console.error("Status check failed:", err);
       });
   }
 
   function stopOperation() {
     fetch("/api/task/stop", { method: "POST" })
-      .then(res => res.json())
       .then(() => {
         clearInterval(intervalId);
-        alert("🛑 Process stopped");
-        document.getElementById("stopButton").classList.add("d-none");
+        document.getElementById("status").innerText = "🛑 Stopped by user";
+        followBtn.disabled = false;
+        unfollowBtn.disabled = false;
+        stopBtn.disabled = true;
       });
   }
 
-  document.getElementById("followButton").addEventListener("click", () => {
-    startOperation("/api/task/follow");
-  });
-
-  document.getElementById("unfollowButton").addEventListener("click", () => {
-    startOperation("/api/task/unfollow");
-  });
-
-  document.getElementById("stopButton").addEventListener("click", () => {
-    stopOperation();
-  });
-
-  document.getElementById("stopButtonProgress").addEventListener("click", () => {
-    stopOperation();
-  });
-
-  document.getElementById("newOperationButton").addEventListener("click", () => {
-    window.location.reload();
-  });
+  followBtn?.addEventListener("click", () => startOperation("/api/task/follow"));
+  unfollowBtn?.addEventListener("click", () => startOperation("/api/task/unfollow"));
+  stopBtn?.addEventListener("click", stopOperation);
 });
