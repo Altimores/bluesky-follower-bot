@@ -19,18 +19,16 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
-    })
-      .then(() => {
-        document.getElementById("status").innerText = "🟢 Started";
-        followBtn.disabled = true;
-        unfollowBtn.disabled = true;
-        stopBtn.classList.remove("d-none");
-        intervalId = setInterval(checkStatus, 2000);
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Failed to start";
-      });
+    }).then(() => {
+      document.getElementById("status").innerText = "🟢 Started";
+      followBtn.disabled = true;
+      unfollowBtn.disabled = true;
+      stopBtn.classList.remove("d-none");
+      intervalId = setInterval(checkStatus, 2000);
+    }).catch(err => {
+      console.error(err);
+      document.getElementById("status").innerText = "❌ Failed to start";
+    });
   }
 
   function checkStatus() {
