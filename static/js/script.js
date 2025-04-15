@@ -17,16 +17,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     })
       .then(() => {
         document.getElementById("status").innerText = "🟢 Started";
         followBtn.disabled = true;
         unfollowBtn.disabled = true;
-        stopBtn.disabled = false;
+        stopBtn.classList.remove("d-none");
         intervalId = setInterval(checkStatus, 2000);
       })
       .catch(err => {
@@ -51,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
           clearInterval(intervalId);
           followBtn.disabled = false;
           unfollowBtn.disabled = false;
-          stopBtn.disabled = true;
+          stopBtn.classList.add("d-none");
 
           const list = document.getElementById("result-list");
           list.innerHTML = "";
@@ -72,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("status").innerText = "🛑 Stopped by user";
         followBtn.disabled = false;
         unfollowBtn.disabled = false;
-        stopBtn.disabled = true;
+        stopBtn.classList.add("d-none");
       });
   }
 
